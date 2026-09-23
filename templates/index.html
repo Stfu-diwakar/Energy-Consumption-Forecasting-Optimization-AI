@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Home Energy Forecasting & Optimization AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- AI Interactive Background Particles -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- Header Section -->
+  <header>
+    <div class="header-container">
+      <div class="logo-group">
+        <div class="logo-icon">⚡</div>
+        <div class="logo-title">
+          <h1>Smart Home Energy AI</h1>
+          <p>Time-Series Neural Forecasting & HEMS Optimization Engine</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="status-badge">
+          <div class="pulse-dot"></div>
+          <span>AI Neural Engine: <strong style="color: var(--color-cyan);">ACTIVE</strong> (Latency 14ms)</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main>
+    <!-- Top Summary Metrics Row -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Annual Energy Telemetry</span>
+          <div class="metric-icon icon-blue">📊</div>
+        </div>
+        <div class="metric-value" id="valTotalEnergy">-- kWh</div>
+        <div class="metric-subtext">365 Days Hourly Telemetry</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Average Home Demand</span>
+          <div class="metric-icon icon-purple">⚡</div>
+        </div>
+        <div class="metric-value" id="valAvgLoad">-- kW</div>
+        <div class="metric-subtext">Base + Sub-Metered Load</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Peak Demand Spike</span>
+          <div class="metric-icon icon-amber">🔥</div>
+        </div>
+        <div class="metric-value" id="valMaxLoad">-- kW</div>
+        <div class="metric-subtext">Highest Load Instance</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Solar PV Generation</span>
+          <div class="metric-icon icon-green">☀️</div>
+        </div>
+        <div class="metric-value" id="valSolarGen">-- kWh</div>
+        <div class="metric-subtext">Clean Solar Energy Harvested</div>
+      </div>
+    </div>
+
+    <!-- Custom Data Input & Dataset Upload Control Card -->
+    <div class="glass-card" style="border: 1px solid var(--border-accent); background: linear-gradient(135deg, rgba(42, 34, 32, 0.9), rgba(58, 48, 45, 0.85)); margin-top: 0.5rem;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">📥 Custom Smart Home Telemetry Data Control</h2>
+          <p class="card-subtitle">Insert your own CSV dataset or simulate custom telemetry readings</p>
+        </div>
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+          <span class="status-badge" style="background: rgba(201, 153, 107, 0.15); border-color: var(--border-accent);">
+            Active Source: <strong id="valDataSource" style="color: var(--color-gold); margin-left: 0.3rem;">Default 1-Year Telemetry</strong>
+          </span>
+          <button class="preset-btn" id="btnResetDataset" style="padding: 0.4rem 0.8rem;" title="Reset back to default dataset">🔄 Reset to Default</button>
+        </div>
+      </div>
+
+      <div class="grid-2col" style="grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <!-- Option A: CSV Upload -->
+        <div style="background: rgba(237, 233, 230, 0.03); border: 1px dashed var(--border-glass); padding: 1.25rem; border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.4rem; color: var(--color-sand);">
+              📁 Upload CSV Telemetry File
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              Upload your smart meter CSV file containing hourly telemetry (timestamp, total_consumption_kw, temperature, etc.).
+            </p>
+          </div>
+          <div>
+            <div style="display: flex; gap: 0.6rem; margin-bottom: 0.75rem;">
+              <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+              <button class="btn-primary" id="btnBrowseCsv" style="background: rgba(237, 233, 230, 0.08); border: 1px solid var(--border-glass); color: var(--text-primary); flex: 1;">
+                <span>📂 Select CSV File</span>
+              </button>
+              <a href="/api/download-template" download class="preset-btn" style="display: flex; align-items: center; justify-content: center; text-decoration: none; text-align: center; padding: 0.5rem 0.8rem;">
+                📥 Sample Template
+              </a>
+            </div>
+            <div id="selectedFileName" style="font-size: 0.78rem; color: var(--color-gold); font-family: 'JetBrains Mono', monospace; margin-bottom: 0.75rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">No file selected</div>
+            <button class="btn-primary" id="btnUploadCsv" style="width: 100%;">
+              <span>🚀 Process & Run Custom Dataset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Option B: Manual Telemetry Entry -->
+        <div style="background: rgba(237, 233, 230, 0.03); border: 1px solid var(--border-glass); padding: 1.25rem; border-radius: var(--radius-md);">
+          <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.4rem; color: var(--color-sand);">
+            ⚙️ Insert Custom Telemetry Readings
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
+            Quickly input custom weather & load values for instant prediction
+          </p>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.8rem;">
+            <div class="control-group">
+              <label style="font-size: 0.75rem;">Temp (°C)</label>
+              <input type="number" id="inputTemp" value="22.0" step="0.5" style="background: var(--bg-secondary); border: 1px solid var(--border-glass); color: var(--text-primary); padding: 0.4rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+            </div>
+            <div class="control-group">
+              <label style="font-size: 0.75rem;">Occupancy (people)</label>
+              <input type="number" id="inputOccupancy" value="2.0" step="0.5" style="background: var(--bg-secondary); border: 1px solid var(--border-glass); color: var(--text-primary); padding: 0.4rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+            </div>
+            <div class="control-group">
+              <label style="font-size: 0.75rem;">HVAC Load (kW)</label>
+              <input type="number" id="inputHvac" value="2.5" step="0.1" style="background: var(--bg-secondary); border: 1px solid var(--border-glass); color: var(--text-primary); padding: 0.4rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+            </div>
+            <div class="control-group">
+              <label style="font-size: 0.75rem;">EV Charger (kW)</label>
+              <input type="number" id="inputEv" value="7.2" step="0.1" style="background: var(--bg-secondary); border: 1px solid var(--border-glass); color: var(--text-primary); padding: 0.4rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+            </div>
+            <div class="control-group">
+              <label style="font-size: 0.75rem;">Water Heater (kW)</label>
+              <input type="number" id="inputWater" value="1.5" step="0.1" style="background: var(--bg-secondary); border: 1px solid var(--border-glass); color: var(--text-primary); padding: 0.4rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+            </div>
+            <div class="control-group">
+              <label style="font-size: 0.75rem;">Solar PV Gen (kW)</label>
+              <input type="number" id="inputSolar" value="3.5" step="0.1" style="background: var(--bg-secondary); border: 1px solid var(--border-glass); color: var(--text-primary); padding: 0.4rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+            </div>
+          </div>
+
+          <button class="btn-primary" id="btnSubmitManual" style="background: linear-gradient(135deg, var(--color-sage), var(--color-gold)); color: #1c1614; width: 100%;">
+            <span>✨ Predict & Simulate Telemetry</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 1: Time-Series Forecast Explorer & Model Benchmarks -->
+    <div class="grid-2col">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">📈 Time-Series Forecast Explorer</h2>
+            <p class="card-subtitle">Actual Demand vs XGBoost, Keras LSTM & ARIMA Predictions</p>
+          </div>
+          <!-- Time Horizon Filter Buttons -->
+          <div class="button-group">
+            <button class="filter-btn active" data-horizon="24">24 Hours</button>
+            <button class="filter-btn" data-horizon="72">3 Days</button>
+            <button class="filter-btn" data-horizon="168">7 Days</button>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="forecastChartCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🏆 Model Benchmark Matrix</h2>
+            <p class="card-subtitle">Evaluation metrics on held-out test split</p>
+          </div>
+        </div>
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th>RMSE</th>
+              <th>MAE</th>
+              <th>MAPE</th>
+              <th>R² Score</th>
+            </tr>
+          </thead>
+          <tbody id="benchmarkTbody">
+            <!-- Dynamically populated via app.js -->
+          </tbody>
+        </table>
+        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(0, 242, 254, 0.05); border-radius: 12px; border: 1px dashed var(--border-accent);">
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">
+            💡 <strong>AI Inference Note:</strong> <code>XGBoost</code> ($R^2 = 0.987$) and <code>Keras LSTM</code> ($R^2 = 0.896$) outperform classical ARIMA by modeling weather interactions and human activity seasonality.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Appliance Breakdown & HEMS Optimization Controls -->
+    <div class="grid-2col">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">🔌 Sub-Metered Appliance Consumption</h2>
+            <p class="card-subtitle">HVAC, EV Charger, Water Heater vs Solar PV Generation</p>
+          </div>
+          <!-- Appliance Filter Buttons -->
+          <div class="button-group" id="applianceFilterGroup">
+            <button class="filter-btn active" data-appliance="all">All</button>
+            <button class="filter-btn" data-appliance="hvac">HVAC</button>
+            <button class="filter-btn" data-appliance="ev">EV Charger</button>
+            <button class="filter-btn" data-appliance="solar">Solar PV</button>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="applianceChartCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">⚙️ HEMS Optimization Simulator</h2>
+            <p class="card-subtitle">Peak Shaving, Load Shifting & BESS Strategy</p>
+          </div>
+        </div>
+
+        <div class="controls-grid">
+          <!-- AI Scenario Preset Buttons -->
+          <div class="preset-label">Quick AI Presets:</div>
+          <div class="preset-group">
+            <button class="preset-btn" id="presetEco">🌱 Eco Solar</button>
+            <button class="preset-btn" id="presetHeatwave">🔥 Heatwave Peak</button>
+            <button class="preset-btn" id="presetMaxSave">⚡ Max Savings</button>
+          </div>
+
+          <div class="control-group">
+            <label>Home Battery Storage (BESS): <span class="slider-val" id="batteryVal">10.0 kWh</span></label>
+            <input type="range" id="batterySlider" min="0" max="25" step="1" value="10">
+          </div>
+
+          <div class="toggle-group" id="groupLoadShifting">
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 500;">Peak Load Shifting</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Defer EV charging to off-peak tariff (22:00–05:00)</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggleLoadShifting" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-group" id="groupBattery">
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 500;">BESS Grid & Solar Arbitrage</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Off-peak charging, peak (17:00–21:00) discharge</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggleBattery" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <button class="btn-primary" id="runOptBtn">
+            <span>✨ Recalculate Savings Strategy</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Optimization Results Summary & Load Shaving Visuals -->
+    <div class="glass-card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">💵 HEMS Financial Strategy Impact</h2>
+          <p class="card-subtitle">Quantified savings under Time-of-Use (ToU) electricity tariffs</p>
+        </div>
+      </div>
+
+      <div class="metrics-grid" style="margin-bottom: 1.5rem;">
+        <div class="metric-card card-cost-base">
+          <div class="metric-title">Baseline Grid Cost</div>
+          <div class="metric-value" id="valBaseCost" style="color: #f43f5e;">$0.00</div>
+          <div class="metric-subtext">Unoptimized Tariff Cost</div>
+        </div>
+
+        <div class="metric-card card-cost-opt">
+          <div class="metric-title">Optimized HEMS Cost</div>
+          <div class="metric-value" id="valOptCost" style="color: #10b981;">$0.00</div>
+          <div class="metric-subtext">With Shifting & Storage</div>
+        </div>
+
+        <div class="metric-card card-cost-save">
+          <div class="metric-title">Net Financial Savings</div>
+          <div class="metric-value" id="valSavings" style="color: #00f2fe;">$0.00 (0%)</div>
+          <div class="metric-subtext">Cost Reduction</div>
+        </div>
+
+        <div class="metric-card card-cost-shave">
+          <div class="metric-title">Peak Demand Shaved</div>
+          <div class="metric-value" id="valPeakShave" style="color: #a855f7;">0 kW (0%)</div>
+          <div class="metric-subtext">Grid Strain Reduction</div>
+        </div>
+
+        <div class="metric-card card-cost-solar">
+          <div class="metric-title">Solar Self-Consumption</div>
+          <div class="metric-value" id="valSelfCons" style="color: #f59e0b;">0%</div>
+          <div class="metric-subtext">Clean Solar Utilization</div>
+        </div>
+      </div>
+
+      <!-- AI Smart Recommendation Insight Box -->
+      <div class="ai-recommendation-box" id="aiAdviceBox">
+        <div class="ai-box-header">
+          <span class="ai-icon">🤖</span>
+          <span class="ai-title">AI Energy Copilot Recommendation:</span>
+        </div>
+        <p class="ai-box-text" id="aiAdviceText">
+          Analyzing telemetry... High EV load detected between 17:00 and 21:00. Enabling 10 kWh battery storage and load shifting will shave peak power demand by 2.85 kW and save approximately 36.7% on monthly utility bills.
+        </p>
+      </div>
+
+      <div class="grid-2col" style="margin-top: 1.5rem;">
+        <div class="chart-wrapper">
+          <canvas id="optChartCanvas"></canvas>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="batteryChartCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>Smart Home Energy Consumption Forecasting & Optimization AI &copy; 2026 | Powered by Keras, XGBoost & Flask</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
