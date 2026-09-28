@@ -88,7 +88,7 @@ def load_ml_models():
     """
     global loaded_xgb, loaded_scalers
 
-    if model_available and loaded_xgb is not None and loaded_scalers is not None:
+    if loaded_xgb is not None and loaded_scalers is not None:
         return True
 
     xgb_path = os.path.join(MODELS_DIR, "xgboost_model.json")
@@ -257,7 +257,7 @@ def process_and_cache_custom_dataframe(df_raw, source_label="Custom User Dataset
     lstm_preds = actual_vals * 0.92
     arima_preds = np.full(len(actual_vals), float(actual_vals.mean()))
 
-    if loaded_xgb is not None and loaded_scalers is not None:
+    if model_available and loaded_xgb is not None and loaded_scalers is not None:
         try:
             feature_cols = loaded_scalers["feature_cols"]
             scaler_X = loaded_scalers["scaler_X"]
