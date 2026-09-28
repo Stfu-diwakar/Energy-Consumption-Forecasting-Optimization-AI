@@ -8,11 +8,12 @@ from flask import Flask, render_template, jsonify, request, Response
 
 from src.optimizer import SmartHomeEnergyOptimizer
 from src.preprocessing import create_features
-from src.models import XGBoostModelWrapper, ARIMAModelWrapper, KerasLSTMModelWrapper
+# Model wrappers are imported lazily inside load_ml_models() to reduce Render startup RAM.
 from src.evaluation import compute_metrics
 
-# Configure Keras PyTorch Backend
-os.environ["KERAS_BACKEND"] = "torch"
+# Configure Keras backend before any possible Keras/model import.
+# Model wrappers are loaded lazily so heavyweight ML libraries do not load at startup.
+os.environ.setdefault("KERAS_BACKEND", "torch")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -79,13 +80,35 @@ ALIAS_MAP = {
 }
 
 def load_ml_models():
+    """Load only the XGBoost model when custom inference actually needs it.
+
+    The src.models module may import heavyweight ML dependencies such as
+    Keras/TensorFlow and statsmodels. Keeping this import lazy prevents those
+    libraries from being loaded during Flask/Gunicorn startup on Render.
+    """
     global loaded_xgb, loaded_scalers
-    if loaded_xgb is None:
-        xgb_path = os.path.join(MODELS_DIR, "xgboost_model.json")
-        scaler_path = os.path.join(MODELS_DIR, "scaler.pkl")
-        if os.path.exists(xgb_path) and os.path.exists(scaler_path):
-            loaded_xgb = XGBoostModelWrapper().load(xgb_path)
-            loaded_scalers = joblib.load(scaler_path)
+
+    if model_available and loaded_xgb is not None and loaded_scalers is not None:
+        return True
+
+    xgb_path = os.path.join(MODELS_DIR, "xgboost_model.json")
+    scaler_path = os.path.join(MODELS_DIR, "scaler.pkl")
+
+    if not (os.path.exists(xgb_path) and os.path.exists(scaler_path)):
+        return False
+
+    try:
+        # Lazy import: only executed when custom prediction is requested.
+        from src.models import XGBoostModelWrapper
+
+        loaded_xgb = XGBoostModelWrapper().load(xgb_path)
+        loaded_scalers = joblib.load(scaler_path)
+        return True
+    except Exception as e:
+        print(f"Optional XGBoost model could not be loaded: {e}")
+        loaded_xgb = None
+        loaded_scalers = None
+        return False
 
 def normalize_custom_columns(df):
     """
@@ -197,7 +220,7 @@ def get_dataset():
         path = os.path.join(DATA_DIR, "processed_energy.csv")
         if not os.path.exists(path):
             path = os.path.join(DATA_DIR, "smart_home_energy.csv")
-        df = pd.read_csv(path)
+        df = pd.read_csv(path, low_memory=True)
         if "timestamp" in df.columns:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
         dataset_cache = df
@@ -223,8 +246,11 @@ def process_and_cache_custom_dataframe(df_raw, source_label="Custom User Dataset
     # 2. Engineer features cleanly
     df_feat = create_features(df_norm)
     
-    # 3. Compute XGBoost & Neural predictions
-    load_ml_models()
+    # 3. Compute predictions.
+    # XGBoost is loaded only when custom inference is requested.
+    # LSTM/ARIMA objects are not instantiated here; their lightweight
+    # derived predictions are retained for the dashboard metrics.
+    model_available = load_ml_models()
     actual_vals = df_feat["total_consumption_kw"].values
     
     xgb_preds = actual_vals * 0.98
@@ -271,6 +297,11 @@ def process_and_cache_custom_dataframe(df_raw, source_label="Custom User Dataset
     
     dataset_cache = df_feat
     active_data_source = source_label
+
+    # Help small Render instances reclaim temporary arrays/dataframes.
+    import gc
+    gc.collect()
+
     return len(df_feat)
 
 @app.route("/")
@@ -461,4 +492,4 @@ def api_reset_dataset():
 
 if __name__ == "__main__":
     print("Starting Smart Home Energy Forecasting Flask Server...")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
